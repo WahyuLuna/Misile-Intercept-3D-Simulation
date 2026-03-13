@@ -48,11 +48,7 @@ Simulasi ini menampilkan:
 
 ## 🖼️ Demo & Screenshot
 
-> *Tambahkan screenshot atau GIF simulasi di sini setelah menjalankan program*
 
-```
-[ Screenshot simulasi berjalan]
-```
 
 ```markdown
 ![Screenshot Simulasi](screenshots/pic_1.png)
