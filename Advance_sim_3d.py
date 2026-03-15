@@ -53,8 +53,8 @@ class Settings:
     green_missile_speed     = 80.0
     defender_detect_radius  = 3000.0  
     building                = 200     
-    limit_intercept_salvo   = True
-    misile_lerp             = 0.5     
+    intercept_salvo_limit   = 3       # Batas pencegat per target (1-5)
+    misile_lerp             = 0.5
     defender_missile_lifetime = 100.0
     gravity                 = 9.8
     arc_height              = 600.0
@@ -63,6 +63,13 @@ class Settings:
     orange_pos   = Vec3(-4000, 0, 800) 
     blue_pos     = Vec3( 800, 0, -2200) 
     green_pos    = Vec3( 800, 0,  2200) 
+
+    # Visual Settings (Individual Trajectories)
+    show_red_traj = False
+    show_yellow_traj = False
+    show_orange_traj = False
+    show_interceptor_traj = False
+
 
 cfg = Settings()
 
@@ -93,7 +100,6 @@ class GameState:
     intercept_missiles= []
     explosions        = []
     targets           = []
-    show_trajectories = False # Status Panel Visual
 
 state = GameState()
 
@@ -333,8 +339,8 @@ def apply_settings():
     cfg.yellow_missile_speed = yellow_speed_slider.value
     cfg.yellow_split_threshold = yellow_split_slider.value
     cfg.defender_missile_lifetime = defender_missile_lifetime.value
-    cfg.limit_intercept_salvo = bool(limit_salvo_slider.value)
-    cfg.misile_lerp = misile_lerp.value
+    cfg.intercept_salvo_limit = int(intercept_limit_slider.value)
+    cfg.misile_lerp = misile_lerp_slider.value
     
     # Skala dikali 2 karena radius adalah setengah dari diameter (scale)
     dome_blue.scale = cfg.defender_detect_radius * 2
@@ -378,11 +384,45 @@ green_speed_slider = Slider(min=50, max=1000, default=cfg.green_missile_speed, s
 green_fire_slider = Slider(min=0.1, max=30, default=cfg.green_fire_interval, step=0.1, text='Green Interval', parent=control_panel, position=(col2_x, start_y - 7*gap_y), scale=sl_scale)
 
 defender_missile_lifetime = Slider(min=1, max=100, default=cfg.defender_missile_lifetime, step=1, text='Def. Lifetime', parent=control_panel, position=(col2_x, start_y - 8*gap_y), scale=sl_scale)
-limit_salvo_slider = Slider(min=0, max=1, default=int(cfg.limit_intercept_salvo), step=1, text='Limit 3/Target', parent=control_panel, position=(col2_x, start_y - 9*gap_y), scale=sl_scale)
+intercept_limit_slider = Slider(min=1, max=5, default=cfg.intercept_salvo_limit, step=1, text='Intercept Limit/Target', parent=control_panel, position=(col2_x, start_y - 9*gap_y), scale=sl_scale)
 defender_detect_radius = Slider(min=100, max=3000, default=cfg.defender_detect_radius, step=10, text='Detect Radius', parent=control_panel, position=(col2_x, start_y - 10*gap_y), scale=sl_scale)
-misile_lerp = Slider(min=0.1, max=10, default=cfg.misile_lerp, step=0.1, text='Lerp', parent=control_panel, position=(col2_x, start_y - 11*gap_y), scale=sl_scale)
+misile_lerp_slider = Slider(min=0.1, max=10, default=cfg.misile_lerp, step=0.1, text='Lerp', parent=control_panel, position=(col2_x, start_y - 11*gap_y), scale=sl_scale)
 
 Button('Apply Changes', parent=control_panel, color=color.azure, scale=(0.25, 0.08), position=(0, -0.4), on_click=apply_settings)
+
+# ──────────────────────── VISUAL PANEL (NEW [Q]) ──────────────────
+def apply_visual_settings():
+    """ Terapkan setting visual dari menu Q """
+    cfg.show_red_traj = bool(vis_red_slider.value)
+    cfg.show_yellow_traj = bool(vis_yellow_slider.value)
+    cfg.show_orange_traj = bool(vis_orange_slider.value)
+    cfg.show_interceptor_traj = bool(vis_interceptor_slider.value)
+    
+    visual_panel.enabled = False
+
+# Panel UI Visual
+visual_panel = Entity(parent=camera.ui, enabled=False, z=-5)
+
+Text(parent=visual_panel, text='VISUAL SETTINGS [Q]', position=(0, 0.30), origin=(0,0), scale=1.5, color=color.cyan)
+
+v_start_y = 0.20
+v_gap = 0.08
+v_scale = 0.75
+
+vis_red_slider = Slider(min=0, max=1, default=0, step=1, text='Red Trajectory', parent=visual_panel, position=(-0.15, v_start_y), scale=v_scale)
+vis_yellow_slider = Slider(min=0, max=1, default=0, step=1, text='Yellow Trajectory', parent=visual_panel, position=(-0.15, v_start_y - v_gap), scale=v_scale)
+vis_orange_slider = Slider(min=0, max=1, default=0, step=1, text='Orange Trajectory', parent=visual_panel, position=(-0.15, v_start_y - v_gap*2), scale=v_scale)
+vis_interceptor_slider = Slider(min=0, max=1, default=0, step=1, text='Defender Trajectory', parent=visual_panel, position=(-0.15, v_start_y - v_gap*3), scale=v_scale)
+
+Button('Apply Visuals', parent=visual_panel, color=color.azure, scale=(0.25, 0.06), position=(-0.15, v_start_y - v_gap*4), on_click=apply_visual_settings)
+
+# Update slider visuals jika config berubah (opsional, untuk sinkronisasi awal)
+vis_red_slider.value = int(cfg.show_red_traj)
+vis_yellow_slider.value = int(cfg.show_yellow_traj)
+vis_orange_slider.value = int(cfg.show_orange_traj)
+vis_interceptor_slider.value = int(cfg.show_interceptor_traj)
+
+
 # ──────────────────────── EXPLOSION ──────────────────────────────
 def spawn_explosion(pos, clr=color.orange, size=4.0):
     e1 = Entity(model='sphere', position=pos,
@@ -517,7 +557,7 @@ class YellowAttackMissile:
             return 'split'
 
         # ── Visual Lines Update ──
-        if state.show_trajectories and not self.split_done:
+        if cfg.show_yellow_traj and not self.split_done:
             self.line_arc.enabled = True
             self.split_marker.enabled = True
             # Draw future arc from current t to 1.0
@@ -638,7 +678,7 @@ class OrangeDrone:
             self.body.look_at(future_pos)
 
         # ── Visual Lines Update ──
-        if state.show_trajectories:
+        if cfg.show_orange_traj:
             self.line_straight.enabled = True
             self.line_path.enabled = True
             self.line_straight.model.vertices = [self.body.position, self.target]
@@ -751,7 +791,7 @@ class AttackMissile:
         self.body.look_at(future_pos)
 
         # ── Visual Lines Update ──
-        if state.show_trajectories:
+        if cfg.show_red_traj:
             self.line_straight.enabled = True
             self.line_arc.enabled = True
             self.line_straight.model.vertices = [self.body.position, self.target]
@@ -896,7 +936,7 @@ class InterceptMissile:
         self._set_pos(self.pos)
 
         # ── Visual Lines Update ──
-        if state.show_trajectories:
+        if cfg.show_interceptor_traj:
             self.line_target_vis.enabled = True
             self.line_predict_vis.enabled = True
             self.line_target_vis.model.vertices = [self.pos, target_pos]
@@ -987,11 +1027,11 @@ def update_hud():
         f'<green>GREEN TEAM (Defender)\n<white>Fired: {state.green_fired}  |  Intercepts: {state.green_score}\nSuccess Rate: {green_rate:.1f}%  |  Lost: {state.green_destroyed}'
     )
 
-    # Indikator Visual
-    if state.show_trajectories:
-        stats_ui.text += '\n\n<cyan>VISUAL PANEL: ON'
-    else:
-        stats_ui.text += '\n\n<gray>VISUAL PANEL: OFF'
+    # Indikator Visual (Simplified)
+    if visual_panel.enabled:
+        stats_ui.text += '\n\n<cyan>CONFIGURING VISUALS...'
+    elif cfg.show_red_traj or cfg.show_yellow_traj or cfg.show_orange_traj or cfg.show_interceptor_traj:
+        stats_ui.text += '\n\n<green>TRAJECTORIES: ACTIVE'
 
     # Indikator Pause
     if state.paused:
@@ -1094,27 +1134,14 @@ def update():
     if blue_threats and state.blue_defend_timer >= cfg.blue_fire_interval:
         state.blue_defend_timer = 0.0
         
-        target_to_engage = None
-        if cfg.limit_intercept_salvo:
-            # Hitung berapa banyak pencegat yang sudah mengarah ke setiap ancaman
-            intercept_counts = {t: 0 for t in blue_threats}
-            for im in state.intercept_missiles:
-                if im.alive and im.team == 'blue' and im.target in intercept_counts:
-                    intercept_counts[im.target] += 1
-            
-            # Cari ancaman yang memiliki < 3 pencegat
-            for threat in blue_threats:
-                if intercept_counts.get(threat, 0) < 3:
-                    target_to_engage = threat
-                    break # Target ditemukan, keluar dari loop
-        else:
-            # Logika original: tembak target yang belum ditarget sama sekali
-            targeted = {im.target for im in state.intercept_missiles if im.alive}
-            free = [t for t in blue_threats if t not in targeted]
-            if free:
-                target_to_engage = free[0]
-            else: # Jika semua sudah ditarget, tembak yang paling dekat (logika original)
-                target_to_engage = blue_threats[0]
+        # Hitung berapa banyak pencegat yang sudah mengarah ke setiap ancaman
+        intercept_counts = {t: 0 for t in blue_threats}
+        for im in state.intercept_missiles:
+            if im.alive and im.team == 'blue' and im.target in intercept_counts:
+                intercept_counts[im.target] += 1
+        
+        # Cari ancaman yang memiliki < cfg.intercept_salvo_limit pencegat
+        target_to_engage = next((threat for threat in blue_threats if intercept_counts.get(threat, 0) < cfg.intercept_salvo_limit), None)
 
         if target_to_engage:
             state.intercept_missiles.append(
@@ -1129,21 +1156,12 @@ def update():
     if green_threats and state.green_defend_timer >= cfg.green_fire_interval:
         state.green_defend_timer = 0.0
 
-        target_to_engage = None
-        if cfg.limit_intercept_salvo:
-            intercept_counts = {t: 0 for t in green_threats}
-            for im in state.intercept_missiles:
-                if im.alive and im.team == 'green' and im.target in intercept_counts:
-                    intercept_counts[im.target] += 1
-            
-            for threat in green_threats:
-                if intercept_counts.get(threat, 0) < 3:
-                    target_to_engage = threat
-                    break
-        else:
-            targeted = {im.target for im in state.intercept_missiles if im.alive}
-            free = [t for t in green_threats if t not in targeted]
-            target_to_engage = free[0] if free else green_threats[0]
+        intercept_counts = {t: 0 for t in green_threats}
+        for im in state.intercept_missiles:
+            if im.alive and im.team == 'green' and im.target in intercept_counts:
+                intercept_counts[im.target] += 1
+        
+        target_to_engage = next((threat for threat in green_threats if intercept_counts.get(threat, 0) < cfg.intercept_salvo_limit), None)
 
         if target_to_engage:
             state.intercept_missiles.append(
@@ -1214,8 +1232,8 @@ def input(key):
         state.paused = not state.paused
     elif key == 'e':
         control_panel.enabled = not control_panel.enabled
-    elif key == 'q':
-        state.show_trajectories = not state.show_trajectories
+    elif key == 'q': # Membuka Visual Panel
+        visual_panel.enabled = not visual_panel.enabled
     elif key == 'r':
         reset_game()
 
