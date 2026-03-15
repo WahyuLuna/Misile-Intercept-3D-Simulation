@@ -74,8 +74,8 @@ Simulasi ini menampilkan:
 
 | Tim | Posisi | Strategi |
 |-----|--------|----------|
-| **Biru (Blue)** | Kanan-Selatan | Deteksi + intersepsi otomatis, maks 3 pencegat/ancaman |
-| **Hijau (Green)** | Kanan-Utara | Deteksi + intersepsi otomatis, maks 3 pencegat/ancaman |
+| **Biru (Blue)** | Kanan-Selatan | Deteksi + intersepsi otomatis, custom pencegat/ancaman(1-5) |
+| **Hijau (Green)** | Kanan-Utara | Deteksi + intersepsi otomatis, custom pencegat/ancaman(1-5) |
 
 ### 🎮 Fitur Simulasi
 - **Kubah deteksi radar** (visualisasi wireframe bola) per tim pertahanan
@@ -388,7 +388,7 @@ Algoritma panduan yang diimplementasikan pada `InterceptMissile` adalah **Predic
 | Navigasi Constant (N) | Ada (3–5) | Tidak ada |
 | Kompleksitas | Lebih tinggi | Lebih sederhana |
 
-PPG dipilih karena lebih mudah diimplementasikan dalam loop game real-time dan menghasilkan visualisasi yang realistis untuk keperluan simulasi.
+
 
 ### Fisika yang Disederhanakan
 
